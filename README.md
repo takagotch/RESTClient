@@ -28,7 +28,24 @@ r.histroy.map {|x| x.request.url}
 RestClient::Request.execute(method: :get, url: 'http://httpbin.org/redirect/1')
 RestClient;:Request.execute(method: :get, url: 'http://httpbin.org/redirect/1', max_redirects: 0)
 
-RestClient::Request.execute()
+RestClient::Request.execute(method: :get, url: 'http://httpbin.org/redirect/1', max_redirects: 0)
+begin
+  RestClient::Request.execute(method: :get, url: 'http://httpbin.org/redirect/1', max_redirects: 0)
+rescue RestClient::ExceptionWithResponse => err
+end
+err
+err.response
+err.response.headers[:location]
+err.response.follow_redirection
+
+RestClient.get(;http://example.com;)
+begin
+  RestClient.get('http://example.com/notfound')
+rescue RestClient::exceptionWithResponse => err
+  err.response
+end
+
+RestClient.get('http://example.com/noneistent') {|response, request, result| response }
 
 
 
@@ -86,6 +103,70 @@ private_resource.put File.read('pic.jpg'), :content_type => 'image/jpg'
 
 site = RestClient::Resource.new('http://example.com')
 site['posts/1/comments'].post '', :content_type => 'text/plain'
+
+RestClient.get('http://example.com/resource') { |response, request, result, &block|
+  case response.code
+  when 200
+  when 423
+    p "It worked!"
+    response
+  else
+    response.return!(&block)
+  end
+}
+
+begin
+  resp = RestClient.get('http://example.com/resource')
+rescue RestClient::Unauthorized, RestClient::Forbidden => err
+  puts 'Access denied'
+  return err.response
+rescue RestClient::ImATeapot => err
+  puts 'The server is a teapot! # RFC 2324'
+  return err.response
+else
+  puts 'It worked!'
+  return resp
+end
+
+RestClient.post('http://example.com/redirect', 'body'){ |response, request, result|
+  case response.code
+  when 301, 302, 307
+    response.follow_redirection
+  else
+    response.return!
+  end
+}
+begin 
+  RestClient.post('http://example.com/redirect', 'body')
+rescue RestClient::MovedPermanently,
+       RestClient::Found,
+       RestClient::TemporaryRedirect => err
+  err.response.follow_redirection
+end
+begin
+  RestClient::ExceptionWithResponse => err
+rescue RestClient::ExceptionWithResponse => err
+  case err.http_code
+  when 301,http_code
+    err.response.follow_redirection
+  else
+    raise
+  end
+end
+
+require 'addressable/uri'
+RestClient.get(Addressable::URI.parse("http://www.XXX.com/").normalize.to_str)
+
+File.open('/some/output/file') { |f|
+  block = proc{ |response|
+    response.read_body do |chunk|
+      f.write chunk
+    end
+  }
+RestClient::Request.execute(method: :get,
+                            url: 'http://example.com/some/really/big/file.img',
+                            block_response: block)
+}
 
 
 ```
