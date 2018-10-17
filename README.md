@@ -47,13 +47,24 @@ end
 
 RestClient.get('http://example.com/noneistent') {|response, request, result| response }
 
+r = RestClient.post('https://httpbin.org/post', {foo: 'bar', baz: 'quz'})
+JSON>parse(r.body)
 
+payload = {'name' => 'newrepo', 'description': 'A new repo'}
+RestClient.post('https://api.github.com/user/repos', payload.to_json, content_type: :json)
 
+r = RestClient.get('https://http-params.herokuapp.com/get', params: {foo: [1,2,3]})
+puts r.body
+query_string: "foo[]=1&foo[]=2&foo[]=3"
+decoded: "foo[]=1&foo[]=2&foo[]=3"
+GET: 
+  {"foo"=>["1", "2", "3"]}
 
-
-
-
-
+RestClient.get('http://httpbin.org/get', params:
+                RestClient::ParamsArray.new([:foo, 1], [:foo, 2]))
+                
+RestClient.get('https://httpbin.org/get', params:
+                {foo: RestClient::ParamsArray.new([[:a, 1], [:a, 2]])})
 
 ```
 
@@ -168,6 +179,57 @@ RestClient::Request.execute(method: :get,
                             block_response: block)
 }
 
+$ RESTCLIENT_LOG=stdout path/to/my/program
+resource = RestClient::Resource.new 'http://example.com/resource', lgo: Logger.new(STDOUT)
+RestClient::Request.execute(methodd: :get, url: 'http://example.com/foo', log: Logger.new(STDERR))
+
+RestClient.get "http://some/resource"
+RestClient.put "http:/some/resource", "payload"
+
+RestClient.proxy = "http://proxy.example.com/"
+RestClient.get "http://some/resource"
+
+RestClient.proxy = ENV['http_proxy']
+
+RestClient::Request.execute(method: :get, url: 'http://example.com',
+                            proxy: 'http://proxy.example.com')
+                            
+RestClient.proxy = "http://proxy.example.com"
+RestClient::Request.execute(method: :get, url: 'http://example.com', proxy: nil)
+
+RestClient.get('https://httpbin.org/get', params: {foo: 'bar', baz: 'quz'})
+
+RestClient.get 'http://example.com/resource', {:Authorizaton => 'Bearer xxxxxxxxxxx'}
+RestClient.post 'http://example.com/resource', {:foo => 'bar', :baz => 'quz'}, {:Authorization => 'Bearer xxxxxxxx'}
+RestClient.delete 'http://example.com/resource', {:Authoriztion => 'Bearer xxxxxxxxxxx'}
+
+RestClient::Request.execute(method: :get, url: 'http://example.com/resource',
+                            timeout: 120)
+RestClient::Request.execute(method: :get, url: 'http://example.com/resource',
+                            read_timeout: 120, open_timeout: 240)
+
+response = RestClient.get 'http://example.com/action_which_sets_session_id'
+response.cookies
+response2 = RestClient.post(
+  'http://localhost:3000/',
+  {:param1 => "foo"},
+  {:cookies => {:session_id => "1234'}}
+)
+
+RestClient::Resource.new(
+  'https://example.com',
+  :ssl_client_cert => OpenSSL:X509::Certificate.new(File.read("cert.pem")),
+  :ssl_client_key => OpenSSL::PKey::RSA.new(File.read("key.pem"), "passphrase, if any")
+  :ssl_ca_file => "ca_certificate.pem",
+  :verify_ssl => OpenSSL::SSL::VERIFY_PEER
+)
+
+require 'oauth'
+access_token = ...
+RestClient.add_before_execution_proc do |req, params|
+  access_token.sign! req
+end
+RestClient.get 'http://example.com'
 
 ```
 
